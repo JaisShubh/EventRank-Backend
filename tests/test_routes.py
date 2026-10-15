@@ -194,19 +194,37 @@ def test_me_rejects_query_string_access_token(client):
     assert res.status_code == 401
 
 
-def test_signup_does_not_issue_unverified_session(client, monkeypatch):
+def test_signup_creates_confirmed_user_and_starts_session(client, monkeypatch):
     class FakeAuth:
-        def sign_up(self, payload):
-            assert payload["options"]["data"]["name"] == "Test Student"
+        def __init__(self):
+            self.admin = self
+
+        def create_user(self, payload):
+            assert payload["email"] == "student@campus.edu"
+            assert payload["email_confirm"] is True
+            assert payload["user_metadata"]["name"] == "Test Student"
             return SimpleNamespace(
                 user=SimpleNamespace(
                     id="new-user",
                     email="student@campus.edu",
                     user_metadata={"name": "Test Student"},
-                    email_confirmed_at=None,
+                    email_confirmed_at="2026-10-15T00:00:00Z",
                     created_at="",
                 ),
-                session=SimpleNamespace(access_token="unverified-session"),
+            )
+
+        def sign_in_with_password(self, credentials):
+            assert credentials == {
+                "email": "student@campus.edu",
+                "password": "secure-password",
+            }
+            return SimpleNamespace(
+                user=SimpleNamespace(
+                    id="new-user",
+                    email="student@campus.edu",
+                    user_metadata={"name": "Test Student"},
+                ),
+                session=SimpleNamespace(access_token="new-session"),
             )
 
     monkeypatch.setattr("routes.auth.get_auth_client", lambda: SimpleNamespace(auth=FakeAuth()))
@@ -215,17 +233,21 @@ def test_signup_does_not_issue_unverified_session(client, monkeypatch):
         "password": "secure-password",
         "name": "Test Student",
     })
-    assert res.status_code == 202
-    assert res.json["email_confirmation_required"] is True
-    assert "token" not in res.json
+    assert res.status_code == 201
+    assert res.json["token"] == "new-session"
+    assert res.json["user"]["id"] == "new-user"
 
 
-def test_login_rejects_unverified_email(client, monkeypatch):
+def test_login_does_not_require_email_confirmation(client, monkeypatch):
     class FakeAuth:
         def sign_in_with_password(self, _credentials):
             return SimpleNamespace(
-                user=SimpleNamespace(email_confirmed_at=None),
-                session=SimpleNamespace(access_token="unverified-session"),
+                user=SimpleNamespace(
+                    id="existing-user",
+                    email="student@campus.edu",
+                    user_metadata={},
+                ),
+                session=SimpleNamespace(access_token="existing-session"),
             )
 
     monkeypatch.setattr("routes.auth.get_auth_client", lambda: SimpleNamespace(auth=FakeAuth()))
@@ -233,8 +255,8 @@ def test_login_rejects_unverified_email(client, monkeypatch):
         "email": "student@campus.edu",
         "password": "secure-password",
     })
-    assert res.status_code == 403
-    assert "verify your email" in res.json["error"]
+    assert res.status_code == 200
+    assert res.json["token"] == "existing-session"
 
 
 def test_logout(client):

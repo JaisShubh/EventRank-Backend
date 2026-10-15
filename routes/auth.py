@@ -77,7 +77,7 @@ def require_auth(f):
 @bp.post("/auth/signup")
 @bp.post("/signup")
 def signup():
-    """Register a new student account with email and password."""
+    """Register a confirmed student account and return an authenticated session."""
     data = request.get_json(silent=True) or {}
     email = str(data.get("email", "")).strip().lower()
     password = str(data.get("password", "")).strip()
@@ -100,22 +100,22 @@ def signup():
     client = get_auth_client()
 
     try:
-        response = client.auth.sign_up({
+        response = client.auth.admin.create_user({
             "email": email,
             "password": password,
-            "options": {"data": {"name": name} if name else {}},
+            "email_confirm": True,
+            "user_metadata": {"name": name} if name else {},
         })
         user_dict = _user_to_dict(response.user)
-        session_dict = _session_to_dict(response.session)
+        login_response = client.auth.sign_in_with_password({
+            "email": email,
+            "password": password,
+        })
+        session_dict = _session_to_dict(login_response.session)
         token = session_dict.get("access_token") if session_dict else None
-        email_confirmed = getattr(response.user, "email_confirmed_at", None)
 
-        if not token or not email_confirmed:
-            return jsonify({
-                "message": "Account created. Check your email to verify your address before logging in.",
-                "user": user_dict,
-                "email_confirmation_required": True,
-            }), 202
+        if not token:
+            return jsonify({"error": "Account created, but a login session could not be started."}), 500
 
         return jsonify({
             "message": "Sign up successful.",
@@ -149,8 +149,6 @@ def login():
             "email": email,
             "password": password,
         })
-        if not getattr(response.user, "email_confirmed_at", None):
-            return jsonify({"error": "Please verify your email address before logging in."}), 403
         user_dict = _user_to_dict(response.user)
         session_dict = _session_to_dict(response.session)
         token = session_dict.get("access_token") if session_dict else None
