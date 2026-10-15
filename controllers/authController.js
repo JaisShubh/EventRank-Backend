@@ -8,12 +8,13 @@ function createToken(userId) {
 }
 
 function publicUser(user) {
-  return { id: user.id, name: user.name, email: user.email };
+  return { id: user.id, name: user.name, email: user.email, role: user.role || 'participant' };
 }
 
 async function register(req, res, next) {
   try {
     const { name, email, password } = req.body || {};
+    const role = req.body?.role || 'participant';
     if (typeof name !== 'string' || typeof email !== 'string' || typeof password !== 'string' || !name.trim() || !email.trim() || !password) {
       return res.status(400).json({ message: 'Name, email, and password are required' });
     }
@@ -23,6 +24,9 @@ async function register(req, res, next) {
     if (password.length < 8 || Buffer.byteLength(password, 'utf8') > 72) {
       return res.status(400).json({ message: 'Password must be 8 or more characters and no more than 72 UTF-8 bytes' });
     }
+    if (!['community', 'participant'].includes(role)) {
+      return res.status(400).json({ message: 'Role must be community or participant' });
+    }
 
     const normalizedEmail = email.trim().toLowerCase();
     const existingUser = await User.findOne({ email: normalizedEmail });
@@ -30,7 +34,7 @@ async function register(req, res, next) {
       return res.status(409).json({ message: 'An account with this email already exists' });
     }
 
-    const user = await User.create({ name, email: normalizedEmail, password });
+    const user = await User.create({ name, email: normalizedEmail, password, role });
     return res.status(201).json({ user: publicUser(user), token: createToken(user.id) });
   } catch (error) {
     if (error.code === 11000) {

@@ -79,3 +79,7 @@ Passwords are hashed before storage. The API never returns password hashes.
 ## Security configuration
 
 The API sets standard security headers with Helmet. Registration and login share a limit of 10 requests per 15 minutes per client IP. `CORS_ORIGINS` is a comma-separated allowlist; set it to the exact frontend origin(s) before deployment (for example, your Vercel URL). Requests without an `Origin` header remain available for server-side clients such as Postman. JWTs are verified with HS256 only. Passwords must be at least 8 characters and no more than 72 UTF-8 bytes, matching bcrypt's input limit.
+
+## Account types and dashboards
+
+Signup offers two account types: `community` organizers can publish hackathons, workshops, and other events; `participant` accounts can browse, check in, and review. Community dashboards load hosted events from `GET /api/events/mine`; participant dashboards load verified check-ins from `GET /api/checkins/mine`.

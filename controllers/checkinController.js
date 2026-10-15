@@ -132,4 +132,15 @@ async function listEventCheckins(req, res, next) {
   }
 }
 
-module.exports = { getQrData, createCheckin, getCheckinStatus, listEventCheckins };
+async function listMyCheckins(req, res, next) {
+  try {
+    const checkins = await Checkin.find({ userId: req.user._id, verified: true })
+      .sort({ createdAt: -1 })
+      .populate('eventId', 'title category organizer venue startTime');
+    return res.json({ checkins });
+  } catch (error) {
+    return next(error);
+  }
+}
+
+module.exports = { getQrData, createCheckin, getCheckinStatus, listEventCheckins, listMyCheckins };

@@ -134,8 +134,24 @@ async function getEvent(req, res, next) {
   }
 }
 
+async function listMyEvents(req, res, next) {
+  try {
+    if (req.user.role !== 'community') {
+      return res.status(403).json({ message: 'Only community organizers can view hosted events' });
+    }
+    const events = await getScoredEvents();
+    const mine = events.filter((event) => event.organizer_id === String(req.user._id));
+    return res.json({ events: mine, count: mine.length });
+  } catch (error) {
+    return next(error);
+  }
+}
+
 async function createEvent(req, res, next) {
   try {
+    if (req.user.role !== 'community') {
+      return res.status(403).json({ message: 'Only community organizers can create events' });
+    }
     const payload = eventPayload(req.body, { creating: true });
     payload.location = parseCoordinates(payload.location || {});
     payload.organizer = payload.organizer || req.user.name || req.user.email.split('@')[0];
@@ -149,6 +165,9 @@ async function createEvent(req, res, next) {
 
 async function updateEvent(req, res, next) {
   try {
+    if (req.user.role !== 'community') {
+      return res.status(403).json({ message: 'Only community organizers can update events' });
+    }
     if (!mongoose.isValidObjectId(req.params.eventId)) {
       return res.status(400).json({ message: 'Invalid event id' });
     }
@@ -171,6 +190,9 @@ async function updateEvent(req, res, next) {
 
 async function deleteEvent(req, res, next) {
   try {
+    if (req.user.role !== 'community') {
+      return res.status(403).json({ message: 'Only community organizers can delete events' });
+    }
     if (!mongoose.isValidObjectId(req.params.eventId)) {
       return res.status(400).json({ message: 'Invalid event id' });
     }
@@ -190,4 +212,4 @@ async function deleteEvent(req, res, next) {
   }
 }
 
-module.exports = { listEvents, listCategories, recommendations, getEvent, createEvent, updateEvent, deleteEvent };
+module.exports = { listEvents, listCategories, recommendations, getEvent, listMyEvents, createEvent, updateEvent, deleteEvent };

@@ -4,6 +4,7 @@ const {
   listCategories,
   recommendations,
   getEvent,
+  listMyEvents,
   createEvent,
   updateEvent,
   deleteEvent
@@ -15,6 +16,7 @@ const router = express.Router();
 
 router.get('/categories', listCategories);
 router.get('/recommendations', recommendations);
+router.get('/mine', authenticate, listMyEvents);
 router.get('/:eventId/qr-data', authenticate, getQrData);
 router.get('/:eventId/checkins', authenticate, listEventCheckins);
 router.get('/', listEvents);

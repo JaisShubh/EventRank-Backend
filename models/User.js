@@ -18,6 +18,12 @@ const userSchema = new mongoose.Schema(
       trim: true,
       match: [/^[^\s@]+@[^\s@]+\.[^\s@]+$/, 'Enter a valid email']
     },
+    role: {
+      type: String,
+      enum: ['community', 'participant'],
+      default: 'participant',
+      index: true
+    },
     password: {
       type: String,
       required: [true, 'Password is required'],
