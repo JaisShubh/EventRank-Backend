@@ -40,6 +40,17 @@ app.use(cors({
 }));
 app.use(express.json({ limit: '10kb' }));
 
+// Vercel runs this Express app as a serverless function, so connect before
+// handling each request while reusing the cached Mongoose connection.
+app.use('/api', async (req, res, next) => {
+  try {
+    await connectDB();
+    next();
+  } catch (error) {
+    next(error);
+  }
+});
+
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
 app.use('/api/auth', authRoutes);
 app.use('/api/events', eventRoutes);

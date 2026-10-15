@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+let connectionPromise;
 
 async function connectDB() {
   const { MONGODB_URI } = process.env;
@@ -6,8 +7,19 @@ async function connectDB() {
     throw new Error('MONGODB_URI is not configured');
   }
 
-  await mongoose.connect(MONGODB_URI);
-  console.log('MongoDB connected');
+  if (mongoose.connection.readyState === 1) return mongoose.connection;
+  if (!connectionPromise) {
+    connectionPromise = mongoose.connect(MONGODB_URI)
+      .then(() => {
+        console.log('MongoDB connected');
+        return mongoose.connection;
+      })
+      .catch((error) => {
+        connectionPromise = null;
+        throw error;
+      });
+  }
+  return connectionPromise;
 }
 
 module.exports = connectDB;
