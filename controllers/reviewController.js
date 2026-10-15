@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const Checkin = require('../models/Checkin');
 const Event = require('../models/Event');
 const Review = require('../models/Review');
+const Participation = require('../models/Participation');
 const { analyzeSentiment, isSpamReview, generateProsAndCons } = require('../services/reviewAnalysis');
 const { scoreReviewSet, compositeRank } = require('../services/eventRanking');
 
@@ -47,8 +48,18 @@ async function createOrUpdateReview(req, res, next) {
     if (comment.length > 5000) return res.status(400).json({ message: 'Comment must be 5000 characters or fewer' });
     if (comment && isSpamReview(comment)) return res.status(400).json({ message: 'Review rejected: comment appears to be spam or too short' });
 
-    const event = await Event.findById(req.params.eventId).select('_id');
+    const event = await Event.findById(req.params.eventId).select('_id startTime');
     if (!event) return res.status(404).json({ message: 'Event not found' });
+    if (req.user.role !== 'participant') {
+      return res.status(403).json({ message: 'Only participant accounts can review events' });
+    }
+    if (event.startTime.getTime() > Date.now()) {
+      return res.status(403).json({ message: 'Reviews are available after the event has ended' });
+    }
+    const participation = await Participation.exists({ eventId: event._id, userId: req.user._id });
+    if (!participation) {
+      return res.status(403).json({ message: 'You must participate in this event before submitting a review' });
+    }
     const filter = { eventId: event._id, userId: req.user._id };
     const existing = await Review.findOne(filter);
     const review = await Review.findOneAndUpdate(
