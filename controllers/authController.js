@@ -17,6 +17,12 @@ async function register(req, res, next) {
     if (typeof name !== 'string' || typeof email !== 'string' || typeof password !== 'string' || !name.trim() || !email.trim() || !password) {
       return res.status(400).json({ message: 'Name, email, and password are required' });
     }
+    if (name.trim().length < 2 || name.trim().length > 80 || email.trim().length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      return res.status(400).json({ message: 'Enter a valid name and email address' });
+    }
+    if (password.length < 8 || Buffer.byteLength(password, 'utf8') > 72) {
+      return res.status(400).json({ message: 'Password must be 8 or more characters and no more than 72 UTF-8 bytes' });
+    }
 
     const normalizedEmail = email.trim().toLowerCase();
     const existingUser = await User.findOne({ email: normalizedEmail });
@@ -39,6 +45,9 @@ async function login(req, res, next) {
     const { email, password } = req.body || {};
     if (typeof email !== 'string' || typeof password !== 'string' || !email.trim() || !password) {
       return res.status(400).json({ message: 'Email and password are required' });
+    }
+    if (email.trim().length > 254 || Buffer.byteLength(password, 'utf8') > 72) {
+      return res.status(400).json({ message: 'Invalid email or password length' });
     }
 
     const user = await User.findOne({ email: email.trim().toLowerCase() }).select('+password');

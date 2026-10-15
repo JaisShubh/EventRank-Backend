@@ -1,6 +1,6 @@
 # EventRank Backend
 
-Express and MongoDB API with JWT authentication.
+Express and MongoDB API with JWT authentication. Registration creates the account and returns a token immediately; this API does not require email verification.
 
 ## Database design
 
@@ -75,3 +75,7 @@ Import `postman/EventRank.postman_collection.json` into Postman. The `Health` fo
 Example authenticated request header: `Authorization: Bearer <token>`.
 
 Passwords are hashed before storage. The API never returns password hashes.
+
+## Security configuration
+
+The API sets standard security headers with Helmet. Registration and login share a limit of 10 requests per 15 minutes per client IP. `CORS_ORIGINS` is a comma-separated allowlist; set it to the exact frontend origin(s) before deployment (for example, your Vercel URL). Requests without an `Origin` header remain available for server-side clients such as Postman. JWTs are verified with HS256 only. Passwords must be at least 8 characters and no more than 72 UTF-8 bytes, matching bcrypt's input limit.

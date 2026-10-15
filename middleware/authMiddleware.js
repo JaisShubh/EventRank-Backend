@@ -9,7 +9,7 @@ async function authenticate(req, res, next) {
   }
 
   try {
-    const payload = jwt.verify(token, process.env.JWT_SECRET);
+    const payload = jwt.verify(token, process.env.JWT_SECRET, { algorithms: ['HS256'] });
     const user = await User.findById(payload.sub);
     if (!user) return res.status(401).json({ message: 'Authentication required' });
     req.user = user;
@@ -30,7 +30,7 @@ async function optionalAuthenticate(req, res, next) {
     return next();
   }
   try {
-    const payload = jwt.verify(token, process.env.JWT_SECRET);
+    const payload = jwt.verify(token, process.env.JWT_SECRET, { algorithms: ['HS256'] });
     req.user = await User.findById(payload.sub);
     return next();
   } catch (error) {
