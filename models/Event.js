@@ -13,7 +13,8 @@ const eventSchema = new mongoose.Schema(
       lng: { type: Number, min: -180, max: 180, default: null }
     },
     startTime: { type: Date, required: true, index: true },
-    capacity: { type: Number, min: 1, max: 1000000, default: 100 }
+    capacity: { type: Number, min: 1, max: 1000000, default: 100 },
+    registeredCount: { type: Number, min: 0, default: 0 }
   },
   { timestamps: true }
 );

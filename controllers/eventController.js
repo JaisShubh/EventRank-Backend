@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const Event = require('../models/Event');
 const Review = require('../models/Review');
 const Checkin = require('../models/Checkin');
+const Participation = require('../models/Participation');
 const { enrichEvents } = require('../services/eventRanking');
 const { recommendEvents } = require('../services/recommendations');
 
@@ -203,7 +204,8 @@ async function deleteEvent(req, res, next) {
     }
     await Promise.all([
       Review.deleteMany({ eventId: event._id }),
-      Checkin.deleteMany({ eventId: event._id })
+      Checkin.deleteMany({ eventId: event._id }),
+      Participation.deleteMany({ eventId: event._id })
     ]);
     await event.deleteOne();
     return res.json({ message: 'Event deleted successfully' });

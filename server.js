@@ -8,6 +8,7 @@ const authRoutes = require('./routes/authRoutes');
 const eventRoutes = require('./routes/eventRoutes');
 const reviewRoutes = require('./routes/reviewRoutes');
 const checkinRoutes = require('./routes/checkinRoutes');
+const participationRoutes = require('./routes/participationRoutes');
 const { createCheckin, getCheckinStatus } = require('./controllers/checkinController');
 const authenticate = require('./middleware/authMiddleware');
 const { optionalAuthenticate } = require('./middleware/authMiddleware');
@@ -44,6 +45,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/events', eventRoutes);
 app.use('/api', reviewRoutes);
 app.use('/api/checkins', checkinRoutes);
+app.use('/api/participations', participationRoutes);
 app.post('/api/checkin', authenticate, createCheckin);
 app.get('/api/checkin/status', optionalAuthenticate, getCheckinStatus);
 

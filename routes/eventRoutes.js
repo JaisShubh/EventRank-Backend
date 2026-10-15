@@ -11,6 +11,7 @@ const {
 } = require('../controllers/eventController');
 const authenticate = require('../middleware/authMiddleware');
 const { getQrData, listEventCheckins } = require('../controllers/checkinController');
+const { getParticipationStatus, joinEvent } = require('../controllers/participationController');
 
 const router = express.Router();
 
@@ -19,6 +20,8 @@ router.get('/recommendations', recommendations);
 router.get('/mine', authenticate, listMyEvents);
 router.get('/:eventId/qr-data', authenticate, getQrData);
 router.get('/:eventId/checkins', authenticate, listEventCheckins);
+router.get('/:eventId/participation', authenticate, getParticipationStatus);
+router.post('/:eventId/participate', authenticate, joinEvent);
 router.get('/', listEvents);
 router.get('/:eventId', getEvent);
 router.post('/', authenticate, createEvent);
