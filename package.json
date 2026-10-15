@@ -1,5 +1,26 @@
 {
+  "name": "eventrank-backend",
+  "version": "1.0.0",
+  "description": "EventRank authentication API",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js",
+    "api:check": "postman collection run ./postman/EventRank.postman_collection.json -i Health --no-report-events",
+    "api:check:all": "postman collection run ./postman/EventRank.postman_collection.json --no-report-events"
+  },
+  "engines": {
+    "node": ">=18"
+  },
   "dependencies": {
-    "@supabase/server": "^1.9.2"
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.9.5"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.9"
   }
 }

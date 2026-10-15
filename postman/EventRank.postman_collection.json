@@ -1,0 +1,140 @@
+{
+  "info": {
+    "_postman_id": "c9c0a1e4-468f-4c51-95ce-5051e0ff6e8a",
+    "name": "EventRank API",
+    "description": "Local smoke checks and end-to-end requests for EventRank auth, events, reviews, and verified check-ins.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:5000" },
+    { "key": "token", "value": "" },
+    { "key": "eventId", "value": "" },
+    { "key": "reviewId", "value": "" },
+    { "key": "testEmail", "value": "" },
+    { "key": "testPassword", "value": "Postman-Check-Only-2026!" },
+    { "key": "qrToken", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "Health check",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('API is healthy', function () {", "  pm.response.to.have.status(200);", "  pm.expect(pm.response.json().status).to.eql('ok');", "});"] } }],
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/health" }
+        }
+      ]
+    },
+    {
+      "name": "Auth and Events",
+      "item": [
+        {
+          "name": "Register test user",
+          "event": [
+            { "listen": "prerequest", "script": { "type": "text/javascript", "exec": ["pm.collectionVariables.set('testEmail', 'postman+' + Date.now() + '@example.com');"] } },
+            { "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('User registered', function () {", "  pm.response.to.have.status(201);", "  const body = pm.response.json();", "  pm.expect(body.user.email).to.eql(pm.collectionVariables.get('testEmail'));", "  pm.collectionVariables.set('token', body.token);", "});"] } }
+          ],
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"name\": \"Postman Check\",\n  \"email\": \"{{testEmail}}\",\n  \"password\": \"{{testPassword}}\"\n}", "options": { "raw": { "language": "json" } } }, "url": "{{baseUrl}}/api/auth/register" }
+        },
+        {
+          "name": "Login test user",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Login succeeds', function () {", "  pm.response.to.have.status(200);", "  pm.collectionVariables.set('token', pm.response.json().token);", "});"] } }],
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"email\": \"{{testEmail}}\",\n  \"password\": \"{{testPassword}}\"\n}", "options": { "raw": { "language": "json" } } }, "url": "{{baseUrl}}/api/auth/login" }
+        },
+        {
+          "name": "Get current user",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Current user is authenticated', function () {", "  pm.response.to.have.status(200);", "  pm.expect(pm.response.json().user.email).to.eql(pm.collectionVariables.get('testEmail'));", "});"] } }],
+          "request": { "method": "GET", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] }, "url": "{{baseUrl}}/api/auth/me" }
+        },
+        {
+          "name": "Create event",
+          "event": [
+            { "listen": "prerequest", "script": { "type": "text/javascript", "exec": ["pm.collectionVariables.set('eventStartTime', new Date(Date.now() + 5 * 60 * 1000).toISOString());"] } },
+            { "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Event created', function () {", "  pm.response.to.have.status(201);", "  const event = pm.response.json().event;", "  pm.collectionVariables.set('eventId', event.id);", "  pm.expect(event.organizer_id).to.be.a('string');", "});"] } }
+          ],
+          "request": { "method": "POST", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] }, "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"title\": \"Postman API Check\",\n  \"description\": \"Temporary event created by the Postman collection\",\n  \"category\": \"Testing\",\n  \"venue\": \"Test Venue\",\n  \"startTime\": \"{{eventStartTime}}\",\n  \"capacity\": 20,\n  \"location\": { \"lat\": 0, \"lng\": 0 }\n}", "options": { "raw": { "language": "json" } } }, "url": "{{baseUrl}}/api/events" }
+        },
+        {
+          "name": "List events",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Event listing succeeds', function () {", "  pm.response.to.have.status(200);", "  pm.expect(pm.response.json().events).to.be.an('array');", "});"] } }],
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/events?search=Postman&sort=date" }
+        },
+        {
+          "name": "Get event categories",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Categories are returned', function () {", "  pm.response.to.have.status(200);", "  pm.expect(pm.response.json().categories).to.be.an('array');", "});"] } }],
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/events/categories" }
+        },
+        {
+          "name": "Get event recommendations",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Recommendations are ranked', function () {", "  pm.response.to.have.status(200);", "  const items = pm.response.json().recommendations;", "  pm.expect(items).to.be.an('array');", "  if (items.length) pm.expect(items[0].match_score).to.be.a('number');", "});"] } }],
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/events/recommendations?interests=testing,api&top_n=5" }
+        },
+        {
+          "name": "Get created event",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Created event can be fetched', function () {", "  pm.response.to.have.status(200);", "  pm.expect(pm.response.json().event.id).to.eql(pm.collectionVariables.get('eventId'));", "});"] } }],
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/events/{{eventId}}" }
+        },
+        {
+          "name": "Update created event",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Organizer can update event', function () {", "  pm.response.to.have.status(200);", "  pm.expect(pm.response.json().event.title).to.eql('Postman API Check Updated');", "});"] } }],
+          "request": { "method": "PUT", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] }, "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{ \"title\": \"Postman API Check Updated\" }", "options": { "raw": { "language": "json" } } }, "url": "{{baseUrl}}/api/events/{{eventId}}" }
+        }
+      ]
+    },
+    {
+      "name": "Reviews and Check-ins",
+      "item": [
+        {
+          "name": "Get rotating QR data",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Organizer receives a short-lived QR token', function () {", "  pm.response.to.have.status(200);", "  const body = pm.response.json();", "  pm.expect(body.expires_in_seconds).to.be.above(0);", "  pm.collectionVariables.set('qrToken', body.token);", "});"] } }],
+          "request": { "method": "GET", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] }, "url": "{{baseUrl}}/api/checkins/events/{{eventId}}/qr-data" }
+        },
+        {
+          "name": "Create verified check-in",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Check-in is verified', function () {", "  pm.response.to.have.status(201);", "  pm.expect(pm.response.json().verified).to.eql(true);", "});"] } }],
+          "request": { "method": "POST", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] }, "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"eventId\": \"{{eventId}}\",\n  \"token\": \"{{qrToken}}\",\n  \"lat\": 0,\n  \"lng\": 0\n}", "options": { "raw": { "language": "json" } } }, "url": "{{baseUrl}}/api/checkins" }
+        },
+        {
+          "name": "Check-in status",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Attendee status is checked', function () {", "  pm.response.to.have.status(200);", "  pm.expect(pm.response.json().checked_in).to.eql(true);", "});"] } }],
+          "request": { "method": "GET", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] }, "url": "{{baseUrl}}/api/checkins/status?eventId={{eventId}}" }
+        },
+        {
+          "name": "Submit review after check-in",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Review records attendee verification', function () {", "  pm.response.to.have.status(201);", "  const body = pm.response.json();", "  pm.expect(body.verified_attendee).to.eql(true);", "  pm.collectionVariables.set('reviewId', body.review.id);", "});"] } }],
+          "request": { "method": "POST", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] }, "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{ \"rating\": 9, \"comment\": \"Postman verified check-in review\" }", "options": { "raw": { "language": "json" } } }, "url": "{{baseUrl}}/api/events/{{eventId}}/reviews" }
+        },
+        {
+          "name": "List event reviews",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Reviews are returned', function () {", "  pm.response.to.have.status(200);", "  pm.expect(pm.response.json().reviews.length).to.be.above(0);", "});"] } }],
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/events/{{eventId}}/reviews" }
+        },
+        {
+          "name": "Event insights",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Insights include score and verified turnout', function () {", "  pm.response.to.have.status(200);", "  pm.expect(pm.response.json().verified_attendees).to.eql(1);", "  pm.expect(pm.response.json().composite_rank).to.be.a('number');", "});"] } }],
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/events/{{eventId}}/insights" }
+        },
+        {
+          "name": "Campus-wide insights",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Campus-wide statistics are returned', function () {", "  pm.response.to.have.status(200);", "  const body = pm.response.json();", "  pm.expect(body.total_events).to.be.a('number');", "  pm.expect(body.total_reviews).to.be.a('number');", "  pm.expect(body.total_checkins).to.be.a('number');", "});"] } }],
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/insights" }
+        },
+        {
+          "name": "Organizer check-in roster",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Organizer can see verified turnout', function () {", "  pm.response.to.have.status(200);", "  pm.expect(pm.response.json().turnout_count).to.eql(1);", "});"] } }],
+          "request": { "method": "GET", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] }, "url": "{{baseUrl}}/api/checkins/events/{{eventId}}/checkins" }
+        },
+        {
+          "name": "Delete test review",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Review can be deleted by its author', function () {", "  pm.response.to.have.status(200);", "});"] } }],
+          "request": { "method": "DELETE", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] }, "url": "{{baseUrl}}/api/reviews/{{reviewId}}" }
+        },
+        {
+          "name": "Delete test event",
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Organizer can delete test event', function () {", "  pm.response.to.have.status(200);", "});"] } }],
+          "request": { "method": "DELETE", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }] }, "url": "{{baseUrl}}/api/events/{{eventId}}" }
+        }
+      ]
+    }
+  ]
+}
